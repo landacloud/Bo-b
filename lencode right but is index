@@ -31,32 +31,26 @@ void lencode(const std::string &inflie, const std::string &outflie) {
             }
             if (p.length() == 1 && dictionary.count(p) && dictionary[p] < 256) {
             unsigned char asciiCode = p[0]; // p为单字符，直接获取ASCII码
-            outputFile.write(reinterpret_cast<const char*>(&asciiCode), sizeof(asciiCode)); // 将ASCII字符以二进制形式写入输出文件
-            //std::cout <<asciiCode <<std::endl;
+            outputFile.put(asciiCode); // 直接写入ASCII字符
+            std::cout <<asciiCode <<std::endl;
             } else {
             int index = dictionary[p]; // 获取p字符串序列在字典中的索引
             //std::cout << index << std::endl;
-
-
-            if (p.length() * 8 < 20) { // 如果索引小于2^14，使用两字节编码
-                //std::cout << index << std::endl;
-                // unsigned int val = (index >> 8); // 取高8位
-                // unsigned int msb = ((unsigned char)-1 >> 1) + 1; // 设置MSB为1，对应二进制的10000000
-                // unsigned int firstByte = val | msb; // 应用MSB
-                // unsigned int secondByte = index & 0xFF; // 取低8位
-                // std::cout << firstByte << " a " << secondByte <<std::endl;
-                // outputFile.put(firstByte); // 写入第一个字节到输出文件
-                // outputFile.put(secondByte); // 写入第二个字节到输出文件
-                unsigned int pBinary = (p[0] << 8) | p[1]; // 将p字符串转换为二进制形式
-                std::cout << pBinary << std::endl;
-                outputFile.put(pBinary);
-
+            if (index <= 16384) { // 如果索引小于2^14，使用两字节编码
+                std::cout << index << std::endl;
+                unsigned int val = (index >> 8); // 取高8位
+                unsigned int msb = ((unsigned char)-1 >> 1) + 1; // 设置MSB为1，对应二进制的10000000
+                unsigned int firstByte = val | msb; // 应用MSB
+                unsigned int secondByte = index & 0xFF; // 取低8位
+                //std::cout << firstByte << " a " << secondByte <<std::endl;
+                outputFile.put(firstByte); // 写入第一个字节到输出文件
+                outputFile.put(secondByte); // 写入第二个字节到输出文件
             } else { // 如果索引大于等于2^14，使用三字节编码
-                // unsigned int val = (index >> 16); // 取最高8位
-                // unsigned char msb = ((unsigned char)-1 >> 2) + 1; // 设置最高两位为11，对应二进制的11000000
-                // unsigned char firstByte = val | msb; // 应用MSB
-                // unsigned char secondByte = (index >> 8) & 0xFF; // 取中间8位
-                // unsigned char thirdByte = index & 0xFF; // 取低8位
+                unsigned int val = (index >> 16); // 取最高8位
+                unsigned char msb = ((unsigned char)-1 >> 2) + 1; // 设置最高两位为11，对应二进制的11000000
+                unsigned char firstByte = val | msb; // 应用MSB
+                unsigned char secondByte = (index >> 8) & 0xFF; // 取中间8位
+                unsigned char thirdByte = index & 0xFF; // 取低8位
                 std::cout << firstByte << "b" << secondByte <<std::endl;
                 outputFile.put(firstByte); // 写入第一个字节到输出文件
                 outputFile.put(secondByte); // 写入第二个字节到输出文件
