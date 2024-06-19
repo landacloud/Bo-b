@@ -1,0 +1,67 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <map>
+
+void decode(const std::string &inputFilePath, const std::string &outputFilePath) {
+    std::ifstream inputFile(inputFilePath, std::ios::binary); // 以二进制模式打开输入文件
+    std::ofstream outputFile(outputFilePath, std::ios::binary); // 以二进制模式打开输出文件
+
+    if (!inputFile.is_open() || !outputFile.is_open()) { // 检查文件是否成功打开
+        std::cerr << "打开文件失败！" << std::endl; // 输出错误信息到标准错误流
+        return;
+    }
+
+    std::vector<std::string> dictionary(128); // 创建一个向量来存储字典条目
+    for (int i = 0; i < 128; ++i) {
+        dictionary[i] = std::string(1, i); // 使用ASCII字符初始化字典
+    }
+
+    int dictSize = 128; // 字典的当前大小
+    std::string w, entry; // 存储当前和前一个条目的变量
+    unsigned char flagByte, firstByte, secondByte, thirdByte; // 从输入文件读取的字节的变量
+    int index; // 要解码的字典条目的索引
+
+    while (inputFile.read(reinterpret_cast<char*>(&flagByte), 1)) { // 从输入文件读取一个字节
+        if (flagByte < 128) { // ASCII字符
+            entry = flagByte; // 将flagByte转换为字符串
+            outputFile << entry; // 将entry写入输出文件
+            if (!w.empty() && dictSize < 4194304) { // 检查字典是否可以扩展
+                dictionary.push_back(w + entry); // 将新条目添加到字典中
+                ++dictSize; // 增加字典大小
+            }
+            w = entry; // 更新前一个条目
+        } else {
+            if ((flagByte & 0xC0) == 0x80) { // 两字节索引
+                inputFile.read(reinterpret_cast<char*>(&secondByte), 1); // 读取第二个字节
+                index = ((flagByte & 0x3F) << 8) | secondByte; // 计算索引
+            } else { // 三字节索引
+                inputFile.read(reinterpret_cast<char*>(&secondByte), 1); // 读取第二个字节
+                inputFile.read(reinterpret_cast<char*>(&thirdByte), 1); // 读取第三个字节
+                index = ((flagByte & 0x3F) << 16) | (secondByte << 8) | thirdByte; // 计算索引
+            }
+
+            if (index >= dictSize) { // 检查索引是否有效
+                std::cerr << "无效的索引！" << std::endl; // 输出错误信息到标准错误流
+                break;
+            }
+
+            entry = dictionary[index]; // 从字典中获取条目
+            outputFile << entry; // 将entry写入输出文件
+            if (!w.empty() && dictSize < 4194304) { // 检查字典是否可以扩展
+                dictionary.push_back(w + entry[0]); // 将新条目添加到字典中
+                ++dictSize; // 增加字典大小
+            }
+            w = entry; // 更新前一个条目
+        }
+    }
+
+    inputFile.close(); // 关闭输入文件
+    outputFile.close(); // 关闭输出文件
+}
+
+int main(int argc, char *argv[]) {
+    decode(argv[1], argv[2]); // 使用输入和输出文件路径调用decode函数
+
+    return 0; // 返回成功代码
+}
