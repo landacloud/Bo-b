@@ -19,7 +19,7 @@ void decode(const std::string &inputFilePath, const std::string &outputFilePath)
     std::vector<std::string> dictionary; // 创建一个向量来存储字典条目
     int dictSize = 0; // 字典的当前大小
     std::string w, entry; // 存储当前和前一个条目的变量
-    unsigned char flaaagByte, firstByte, secondByte, thirdByte; // 从输入文件读取的字节的变量
+    unsigned char flagByte, firstByte, secondByte, thirdByte; // 从输入文件读取的字节的变量
     int index; // 要解码的字典条目的索引
 
     while (inputFile.read(reinterpret_cast<char*>(&flagByte), 1)) { // 从输入文件读取一个字节
