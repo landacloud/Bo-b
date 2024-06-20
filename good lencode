@@ -1,0 +1,81 @@
+
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <string>
+#include <vector>
+#include <bitset>
+// 定义encode函数，用于编码输入文件并将结果写入输出文件
+void lencode(const std::string &inflie, const std::string &outflie) {
+    std::ifstream inputFile(inflie); // 打开输入文件
+    std::ofstream outputFile(outflie); // 打开输出文件
+
+    std::map<std::string, int> dictionary; // 创建字典，用于存储字符串和对应的索引
+    for (int i = 0; i < 128; ++i) { // 初始化字典，添加ASCII字符
+        dictionary[std::string(1, i)] = i;
+    }
+    std::map<std::string, int> dictionaryu;
+    std::string p ; // 初始化p字符串，用于存储当前的字符串序列
+    char c; // 用于读取输入文件中的每个字符
+    int dsize = 0; // 字典的初始大小
+    while (inputFile.get(c)) { // 逐字符读取输入文件
+        std::string pc = p + c; // 将当前字符添加到p字符串，形成新的字符串序列
+        if (dictionary.count(pc) || dictionaryu.count(pc)) { // 如果新的字符串序列已存在于字典中
+            p = pc; // 更新p字符串为新的字符串序列
+            //std::cout << pc << std::endl;
+            
+        } else { // 如果新的字符串序列不存在于字典中
+            if (dsize < 4194304){
+                dictionaryu [pc] = dsize;
+                dsize++;
+                //std::cout << pc << std::endl;
+            }
+            if (p.length() <3) {
+              for (char ch : p) {
+                std::cout << ch << std::endl;
+                outputFile.put(ch);
+              }
+            }else {
+            int index = dictionaryu[p]; // 获取p字符串序列在字典中的索引
+            //std::cout << index << std::endl;
+                if (index<16384) { // 如果索引小于2^14，使用两字节编码
+                //std::cout << index << std::endl;
+                unsigned int val = (index >> 8); // 取高8位
+                unsigned int msb = ((unsigned char)-1 >> 1) + 1; // 设置MSB为1，对应二进制的10000000
+                unsigned int firstByte = val | msb; // 应用MSB
+                unsigned int secondByte = index & 0xFF; // 取低8位
+                std::cout << firstByte << " a " << secondByte <<std::endl;
+                outputFile.put(firstByte); // 写入第一个字节到输出文件
+                outputFile.put(secondByte); // 写入第二个字节到输出文件
+                } else { // 如果索引大于等于2^14，使用三字节编码
+                unsigned int val = (index >> 16); // 取最高8位
+                unsigned int msb = ((unsigned char)-1 >> 2) + 1; // 设置最高两位为11，对应二进制的11000000
+                unsigned int firstByte = val | msb; // 应用MSB
+                unsigned int secondByte = (index >> 8) & 0xFF; // 取中间8位
+                unsigned int thirdByte = index & 0xFF; // 取低8位
+                outputFile.put(firstByte); // 写入第一个字节到输出文件
+                outputFile.put(secondByte); // 写入第二个字节到输出文件
+                outputFile.put(thirdByte); // 写入第三个字节到输出文件
+            }
+                 }
+            p = std::string(1,c); // 将当前字符设置为新的p字符串
+        }
+    }
+    std::cout<<c<<std::endl;
+    outputFile.put(c);  
+    // 关闭文件
+    inputFile.close();
+    outputFile.close();
+}
+
+int main(int argc, char* argv[]) {
+
+    std::string inputFile = argv[1]; // 输入文件路径
+    std::string outputFile = argv[2]; // 输出文件路径
+
+    lencode(inputFile, outputFile);
+
+    std::cout << "Encoding complete." << std::endl;
+
+    return 0;
+}
