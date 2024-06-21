@@ -1,0 +1,74 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <map>
+#include <string>
+#include <algorithm>
+
+void decode(const std::string &inputFilePath, const std::string &outputFilePath) {
+    std::ifstream inputFile(inputFilePath, std::ios::binary); // 以二进制模式打开输入文件
+    std::ofstream outputFile(outputFilePath, std::ios::binary); // 以二进制模式打开输出文件
+
+    std::vector<std::string> dictionaryu(128); // 创建一个向量来存储字典条目
+    for (int i = 0; i < 128; ++i) {
+        dictionaryu[i] = std::string(1, i); // 使用ASCII字符初始化字典
+    }
+    std::vector<std::string> dictionary; // 创建一个向量来存储字典条目
+    int dictSize = 0; // 字典的当前大小
+    std::string p, entry, entry2; // 存储当前和前一个条目的变量
+    unsigned char flagByte, firstByte, secondByte, thirdByte; // 从输入文件读取的字节的变量
+    int index; // 要解码的字典条目的索引
+    inputFile.read(reinterpret_cast<char*>(&flagByte), 1); // 读取输入文件的第一个字节
+    entry = flagByte; // 将flagByte转换为字符串
+    outputFile << entry; // 将entry写入输出文件
+    p=entry; // 更新前一个条目
+    while (inputFile.read(reinterpret_cast<char*>(&flagByte), 1)) { // 从输入文件读取一个字节
+        if ((flagByte & 0x80) == 0x00) { // ASCII字符
+            entry = flagByte; // 将flagByte转换为字符串
+            std::string combinedEntry = p + entry;
+            auto it = std::find(dictionary.begin(), dictionary.end(), combinedEntry);
+            if (it != dictionary.end()) {
+                inputFile.read(reinterpret_cast<char*>(&flagByte), 1);
+                entry2 = flagByte;
+                entry=entry+entry2;
+                outputFile << entry; // 将entry写入输出文件
+                std::cout << entry <<"  1"<< std::endl;}
+            else {
+                outputFile << entry; // 将entry写入输出文件
+                std::cout << entry <<"  s"<< std::endl;}
+                if (!p.empty() && dictSize < 4194304) { // 检查字典是否可以扩展
+                dictionary.push_back(p + entry); // 将新条目添加到字典中
+                //std::cout << p + entry <<"  a"<< std::endl;
+                ++dictSize; // 增加字典大小
+                }
+            p = entry; // 更新前一个条目
+        } else {
+            if ((flagByte & 0xC0) == 0x80) { // 两字节索引
+                inputFile.read(reinterpret_cast<char*>(&secondByte), 1); // 读取第二个字节
+                index = ((flagByte & 0x3F) << 8) | secondByte; // 计算索引
+            } else { // 三字节索引
+                inputFile.read(reinterpret_cast<char*>(&secondByte), 1); // 读取第二个字节
+                inputFile.read(reinterpret_cast<char*>(&thirdByte), 1); // 读取第三个字节
+                index = ((flagByte & 0x3F) << 16) | (secondByte << 8) | thirdByte; // 计算索引
+            }
+            entry = dictionary[index]; // 从字典中获取条目
+            outputFile << entry; // 将entry写入输出文件
+            std::cout << entry <<"  m"<< std::endl;
+            if (!p.empty() && dictSize < 4194304) { // 检查字典是否可以扩展
+                dictionary.push_back(p + entry[0]); // 将新条目添加到字典中
+                //std::cout << p + entry[0] <<"   b"<< std::endl;
+                ++dictSize; // 增加字典大小
+            }
+            p = entry; // 更新前一个条目
+        }
+    }
+
+    inputFile.close(); // 关闭输入文件
+    outputFile.close(); // 关闭输出文件
+}
+
+int main(int argc, char *argv[]) {
+    decode(argv[1], argv[2]); // 使用输入和输出文件路径调用decode函数
+
+    return 0; // 返回成功代码
+}
